@@ -73,7 +73,7 @@ SELECT DISTINCT
  UNION ALL
  SELECT   DISTINCT 
     REPLACE(member_base.phone, ',','')                 AS phone,
-       'LCS MCFJ (FJ) & LCS MCSX (SZ)'                 AS partner,
+       'LCS MCFJ (FJ) & LCS MCSZ (SZ)'                 AS partner,
        high_tier.distributor_name                      AS distributor,
        CAST(DATE(historical_join_dt) AS TEXT)                               AS historical_join_dt,
        historical_join_channel                         AS historical_join_channel,
@@ -139,7 +139,7 @@ SELECT DISTINCT
    LEFT JOIN (
             SELECT CASE WHEN distributor_name IN ('LCS UNIFUN (CS) and LCS UNIFUN (SY)') THEN 'LCS UNIFUN'
                                      WHEN distributor_name IN ('LCS XJM (CD) and LCS XJM (ZZ)') THEN 'LCS XJM'
-                                     WHEN distributor_name IN ('LCS MCFJ (FJ) and LCS MCSZ (SZ)') THEN 'LCS MCFJ (FJ) & LCS MCSX (SZ)'
+                                     WHEN distributor_name IN ('LCS MCFJ (FJ) and LCS MCSZ (SZ)') THEN 'LCS MCFJ (FJ) & LCS MCSZ (SZ)'
                                      ELSE distributor_name
                                      END      AS partner,
                     member_detail_id

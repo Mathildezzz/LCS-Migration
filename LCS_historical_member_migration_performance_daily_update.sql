@@ -11,7 +11,7 @@ FROM (
 SELECT DISTINCT 
         CASE WHEN trans.distributor_name IN ('LCS UNIFUN (CS)', 'LCS UNIFUN (SY)') THEN 'LCS UNIFUN'
              WHEN trans.distributor_name IN ('LCS XJM (CD)', 'LCS XJM (ZZ)') THEN 'LCS XJM'
-             WHEN trans.distributor_name IN ('LCS MCFJ (FJ)', 'LCS MCSZ (SZ)') THEN 'LCS MCFJ (FJ) & LCS MCSX (SZ)'
+             WHEN trans.distributor_name IN ('LCS MCFJ (FJ)', 'LCS MCSZ (SZ)') THEN 'LCS MCFJ (FJ) & LCS MCSZ (SZ)'
              ELSE trans.distributor_name
              END                   AS partner,
         trans.crm_member_id,
@@ -36,7 +36,7 @@ SELECT
    DISTINCT 
      CASE WHEN trans.distributor_name IN ('LCS UNIFUN (CS)', 'LCS UNIFUN (SY)') THEN 'LCS UNIFUN'
              WHEN trans.distributor_name IN ('LCS XJM (CD)', 'LCS XJM (ZZ)') THEN 'LCS XJM'
-             WHEN trans.distributor_name IN ('LCS MCFJ (FJ)', 'LCS MCSZ (SZ)') THEN 'LCS MCFJ (FJ) & LCS MCSX (SZ)'
+             WHEN trans.distributor_name IN ('LCS MCFJ (FJ)', 'LCS MCSZ (SZ)') THEN 'LCS MCFJ (FJ) & LCS MCSZ (SZ)'
              ELSE trans.distributor_name
              END                            AS partner,
    trans.crm_member_id,
@@ -54,7 +54,7 @@ INNER JOIN (SELECT * FROM all_purchase_rk WHERE rk = 1) all_purchase_rk
         ON all_purchase_rk.original_order_id = trans.original_order_id
        AND all_purchase_rk.partner = CASE WHEN trans.distributor_name IN ('LCS UNIFUN (CS)', 'LCS UNIFUN (SY)') THEN 'LCS UNIFUN'
              WHEN trans.distributor_name IN ('LCS XJM (CD)', 'LCS XJM (ZZ)') THEN 'LCS XJM'
-             WHEN trans.distributor_name IN ('LCS MCFJ (FJ)', 'LCS MCSZ (SZ)') THEN 'LCS MCFJ (FJ) & LCS MCSX (SZ)'
+             WHEN trans.distributor_name IN ('LCS MCFJ (FJ)', 'LCS MCSZ (SZ)') THEN 'LCS MCFJ (FJ) & LCS MCSZ (SZ)'
              ELSE trans.distributor_name
              END      
     WHERE is_rrp_sales_type = 1 
@@ -66,7 +66,7 @@ member_base_partner AS (
               select DISTINCT  
                       CASE WHEN UPPER(eff_reg_channel) IN ('LCS UNIFUN (CS)', 'LCS UNIFUN (SY)', 'LCS UNIFUN') THEN 'LCS UNIFUN'
                              WHEN UPPER(eff_reg_channel) IN ('LCS XJM (CD)', 'LCS XJM (ZZ)', 'LCS XJM') THEN 'LCS XJM'
-                             WHEN UPPER(eff_reg_channel) IN ('LCS MCFJ (FJ)', 'LCS MCSZ (SZ)') THEN 'LCS MCFJ (FJ) & LCS MCSX (SZ)'
+                             WHEN UPPER(eff_reg_channel) IN ('LCS MCFJ (FJ)', 'LCS MCSZ (SZ)') THEN 'LCS MCFJ (FJ) & LCS MCSZ (SZ)'
                              ELSE UPPER(eff_reg_channel)
                              END                      AS partner,
                       member_detail_id                AS member_detail_id
@@ -77,7 +77,7 @@ member_base_partner AS (
                 SELECT DISTINCT 
                     CASE WHEN trans.distributor_name IN ('LCS UNIFUN (CS)', 'LCS UNIFUN (SY)') THEN 'LCS UNIFUN'
                          WHEN trans.distributor_name IN ('LCS XJM (CD)', 'LCS XJM (ZZ)') THEN 'LCS XJM'
-                         WHEN trans.distributor_name IN ('LCS MCFJ (FJ)', 'LCS MCSZ (SZ)') THEN 'LCS MCFJ (FJ) & LCS MCSX (SZ)'
+                         WHEN trans.distributor_name IN ('LCS MCFJ (FJ)', 'LCS MCSZ (SZ)') THEN 'LCS MCFJ (FJ) & LCS MCSZ (SZ)'
                          ELSE trans.distributor_name
                          END      AS partner,
                     crm_member_id AS member_detail_id
@@ -170,7 +170,7 @@ SELECT
          ON member_base_partner.member_detail_id::integer = trans_rrp_in_lcs.crm_member_id::integer
   LEFT JOIN (SELECT  CASE WHEN trans.distributor_name IN ('LCS UNIFUN (CS)', 'LCS UNIFUN (SY)') THEN 'LCS UNIFUN'
                          WHEN trans.distributor_name IN ('LCS XJM (CD)', 'LCS XJM (ZZ)') THEN 'LCS XJM'
-                         WHEN trans.distributor_name IN ('LCS MCFJ (FJ)', 'LCS MCSZ (SZ)') THEN 'LCS MCFJ (FJ) & LCS MCSX (SZ)'
+                         WHEN trans.distributor_name IN ('LCS MCFJ (FJ)', 'LCS MCSZ (SZ)') THEN 'LCS MCFJ (FJ) & LCS MCSZ (SZ)'
                          ELSE trans.distributor_name
                          END      AS partner,
                          crm_member_id,
@@ -184,7 +184,7 @@ SELECT
         AND member_base_partner.partner  = trans_orders_by_partner.partner
   LEFT JOIN (SELECT  CASE WHEN trans.distributor_name IN ('LCS UNIFUN (CS)', 'LCS UNIFUN (SY)') THEN 'LCS UNIFUN'
                          WHEN trans.distributor_name IN ('LCS XJM (CD)', 'LCS XJM (ZZ)') THEN 'LCS XJM'
-                         WHEN trans.distributor_name IN ('LCS MCFJ (FJ)', 'LCS MCSZ (SZ)') THEN 'LCS MCFJ (FJ) & LCS MCSX (SZ)'
+                         WHEN trans.distributor_name IN ('LCS MCFJ (FJ)', 'LCS MCSZ (SZ)') THEN 'LCS MCFJ (FJ) & LCS MCSZ (SZ)'
                          ELSE trans.distributor_name
                          END      AS partner,
                          crm_member_id,
