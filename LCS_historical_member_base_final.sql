@@ -121,6 +121,7 @@ SELECT DISTINCT
    
    SELECT 
        base.phone,
+       encrypt_base.encrypt_phone,
        base.partner,
        distributor,
        historical_join_dt,
@@ -130,12 +131,10 @@ SELECT DISTINCT
        if_historical_high_vip_tier,
        CASE WHEN cny_tracking_group_2.member_detail_id IS NOT NULL THEN 1 ELSE 0 END AS if_neither_belong_to_lcs_nor_add_wecom_20231224_by_partner
    FROM base
-    LEFT JOIN (  SELECT DISTINCT member_detail_id,
-                    phone
-                from report.member_phone phone_list
-                where phone_source_type = 0
-            ) phone_list
-         ON phone_list.phone = REPLACE(base.phone,',','')
+   LEFT JOIN tutorial.encrypt_phone_20240131 encrypt_base
+          ON base.phone = encrypt_base.phone
+   LEFT JOIN ods.crm_member_phone  encrypt_all
+          ON encrypt_base.encrypt_phone = encrypt_all.phone
    LEFT JOIN (
             SELECT CASE WHEN distributor_name IN ('LCS UNIFUN (CS) and LCS UNIFUN (SY)') THEN 'LCS UNIFUN'
                                      WHEN distributor_name IN ('LCS XJM (CD) and LCS XJM (ZZ)') THEN 'LCS XJM'
@@ -145,5 +144,5 @@ SELECT DISTINCT
                     member_detail_id
               FROM tutorial.mz_historical_not_belong_to_lcs_and_not_add_wecom_20231224_by_distributor 
               ) cny_tracking_group_2
-         ON phone_list.member_detail_id::integer = cny_tracking_group_2.member_detail_id::integer
+         ON encrypt_all.member_detail_id::integer = cny_tracking_group_2.member_detail_id::integer
         AND base.partner = cny_tracking_group_2.partner;

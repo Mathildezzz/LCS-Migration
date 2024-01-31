@@ -140,12 +140,14 @@ SELECT
    last_purchase.lego_sku_name_cn                              AS last_purchase_in_partner_sku_name_cn,
    last_purchase.mbr_sales                                     AS last_purchase_in_partner_rrp_sales
   FROM tutorial.mz_lcs_historical_member_base base
-  LEFT JOIN (  SELECT DISTINCT member_detail_id,
-                    phone
-                from report.member_phone phone_list
-                where phone_source_type = 0
-            ) phone_list
-         ON phone_list.phone = REPLACE(base.phone,',','')
+--   LEFT JOIN (  SELECT DISTINCT member_detail_id,
+--                     phone
+--                 from report.member_phone phone_list
+--                 where phone_source_type = 0
+--             ) phone_list
+--          ON phone_list.phone = REPLACE(base.phone,',','')
+LEFT JOIN ods.crm_member_phone  phone_list
+         ON base.encrypt_phone = phone_list.phone
   LEFT JOIN edw.d_member_detail mbr
          ON phone_list.member_detail_id::integer = mbr.member_detail_id::integer
   LEFT JOIN (SELECT DISTINCT member_detail_id FROM member_base_partner) member_base
@@ -198,6 +200,7 @@ SELECT
   LEFT JOIN last_purchase
          ON member_base_partner.member_detail_id::integer = last_purchase.crm_member_id::integer
         AND member_base_partner.partner = last_purchase.partner;
+        
         
         
     
