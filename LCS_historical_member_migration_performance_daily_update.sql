@@ -1,4 +1,4 @@
-truncate tutorial.mz_lcs_historical_member_migration_performance; -- for the subsequent update
+delete from tutorial.mz_lcs_historical_member_migration_performance; -- for the subsequent update
 insert into tutorial.mz_lcs_historical_member_migration_performance
 
 WITH all_purchase_rk AS (
@@ -138,7 +138,10 @@ SELECT
    last_purchase.store_name                                    AS last_purchase_in_partner_store_name,
    last_purchase.lego_sku_id                                   AS last_purchase_in_partner_sku_id,
    last_purchase.lego_sku_name_cn                              AS last_purchase_in_partner_sku_name_cn,
-   last_purchase.mbr_sales                                     AS last_purchase_in_partner_rrp_sales
+   last_purchase.mbr_sales                                     AS last_purchase_in_partner_rrp_sales,
+
+   to_char(getdate(), 'yyyymmdd')                              AS dl_batch_date,
+   getdate()                                                   AS dl_load_time
   FROM tutorial.mz_lcs_historical_member_base base
 --   LEFT JOIN (  SELECT DISTINCT member_detail_id,
 --                     phone
