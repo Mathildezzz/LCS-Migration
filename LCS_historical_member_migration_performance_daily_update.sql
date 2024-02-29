@@ -1,4 +1,4 @@
-delete from tutorial.mz_lcs_historical_member_migration_performance; -- for the subsequent update
+truncate tutorial.mz_lcs_historical_member_migration_performance; -- for the subsequent update
 insert into tutorial.mz_lcs_historical_member_migration_performance
 
 WITH all_purchase_rk AS (
@@ -63,29 +63,41 @@ GROUP BY 1,2,3,4,5
 ),
 
 member_base_partner AS (
-              select DISTINCT  
+SELECT partner,
+       member_detail_id,
+       MIN(DATE(min_dt))        AS belong_by_partner_dt
+   FROM (
+              select   
                       CASE WHEN UPPER(eff_reg_channel) IN ('LCS UNIFUN (CS)', 'LCS UNIFUN (SY)', 'LCS UNIFUN') THEN 'LCS UNIFUN'
                              WHEN UPPER(eff_reg_channel) IN ('LCS XJM (CD)', 'LCS XJM (ZZ)', 'LCS XJM') THEN 'LCS XJM'
                              WHEN UPPER(eff_reg_channel) IN ('LCS MCFJ (FJ)', 'LCS MCSZ (SZ)') THEN 'LCS MCFJ (FJ) & LCS MCSZ (SZ)'
                              ELSE UPPER(eff_reg_channel)
                              END                      AS partner,
-                      member_detail_id                AS member_detail_id
+                      member_detail_id                AS member_detail_id,
+                      MIN(join_time)                  AS min_dt
                 from edw.d_member_detail
                 where 1 = 1
+                and eff_reg_channel LIKE '%LCS%'
                 and join_time < current_date -- SET CUTOFF TIME
+                GROUP BY 1,2
                 union 
-                SELECT DISTINCT 
+                SELECT  
                     CASE WHEN trans.distributor_name IN ('LCS UNIFUN (CS)', 'LCS UNIFUN (SY)') THEN 'LCS UNIFUN'
                          WHEN trans.distributor_name IN ('LCS XJM (CD)', 'LCS XJM (ZZ)') THEN 'LCS XJM'
                          WHEN trans.distributor_name IN ('LCS MCFJ (FJ)', 'LCS MCSZ (SZ)') THEN 'LCS MCFJ (FJ) & LCS MCSZ (SZ)'
                          ELSE trans.distributor_name
                          END      AS partner,
-                    crm_member_id AS member_detail_id
+                    crm_member_id AS member_detail_id,
+                    MIN(date_id)  AS min_dt
                 FROM edw.f_member_order_detail trans
                   WHERE 1 =1
                   AND is_member = '是'
                   AND is_rrp_sales_type = 1
                   AND if_eff_order_tag IS TRUE
+                  AND trans.distributor_name LIKE '%LCS%'
+                  GROUP BY 1,2
+          )
+          GROUP BY 1,2
 )
 
 
@@ -101,47 +113,52 @@ SELECT
    base.historical_city,
    base.if_historical_high_vip_tier,
    base.if_neither_belong_to_lcs_nor_add_wecom_20231224_by_partner,
+   base.if_neither_belong_to_lcs_nor_add_wecom_20231224_lcs_ttl,
+  CASE WHEN DATE(mbr.join_time) <= '2023-12-24' THEN 1 ELSE 0 END                  AS if_joined_lego_20231224,            --- added
    
   ------------------------ 是否加入乐高 以及是否归属
    
-   CASE WHEN mbr.member_detail_id IS NOT NULL THEN 1 ELSE 0 END                      AS if_joined_lego,
-   CASE WHEN mbr.member_detail_id IS NOT NULL THEN right ('000000000'+ cast (mbr.member_detail_id as varchar),9) ELSE NULL    END member_detail_id,
-   CASE WHEN member_base.member_detail_id IS NOT NULL THEN 1 ELSE 0 END              AS if_lcs_member_base,
-   CASE WHEN member_base_partner.member_detail_id IS NOT NULL THEN 1 ELSE 0 END      AS if_partner_member_base,
+  CASE WHEN mbr.member_detail_id IS NOT NULL THEN 1 ELSE 0 END                      AS if_joined_lego,
+  CASE WHEN mbr.member_detail_id IS NOT NULL THEN right ('000000000'+ cast (mbr.member_detail_id as varchar),9) ELSE NULL    END member_detail_id,
+  CASE WHEN member_base.member_detail_id IS NOT NULL THEN 1 ELSE 0 END              AS if_lcs_member_base,
+  CASE WHEN member_base_partner.member_detail_id IS NOT NULL THEN 1 ELSE 0 END      AS if_partner_member_base,
    
 ------------------------- 如果归属，展示profile信息
-   CASE WHEN member_base.member_detail_id IS NOT NULL THEN DATE(mbr.join_time) ELSE NULL END                              AS join_dt,
-      CASE WHEN member_base_partner.member_detail_id IS NOT NULL THEN mbr.eff_reg_channel ELSE NULL END                   AS eff_reg_channel,
-   CASE WHEN member_base_partner.member_detail_id IS NOT NULL THEN mbr.eff_reg_store ELSE NULL END                        AS eff_reg_store,
+  CASE WHEN member_base.member_detail_id IS NOT NULL THEN DATE(mbr.join_time) ELSE NULL END                              AS join_dt,
+  CASE WHEN member_base.member_detail_id IS NOT NULL THEN member_base.belong_to_lcs_dt ELSE NULL END                     AS belong_to_lcs_dt,     --- added
+   
+  CASE WHEN member_base_partner.member_detail_id IS NOT NULL THEN member_base_partner.belong_by_partner_dt ELSE NULL END AS belong_to_partner_dt, --- added
+  CASE WHEN member_base_partner.member_detail_id IS NOT NULL THEN mbr.eff_reg_channel ELSE NULL END                      AS eff_reg_channel,
+  CASE WHEN member_base_partner.member_detail_id IS NOT NULL THEN mbr.eff_reg_store ELSE NULL END                        AS eff_reg_store,
     CASE WHEN member_base_partner.member_detail_id IS NOT NULL THEN mbr.store_name ELSE NULL END                          AS eff_reg_store_name,  
-   CASE WHEN member_base_partner.member_detail_id IS NOT NULL THEN mbr.tier_code ELSE NULL END                            AS tier_code, 
-   CASE WHEN member_base_partner.member_detail_id IS NOT NULL THEN mbr.point ELSE NULL  END                               AS point,
+  CASE WHEN member_base_partner.member_detail_id IS NOT NULL THEN mbr.tier_code ELSE NULL END                            AS tier_code, 
+  CASE WHEN member_base_partner.member_detail_id IS NOT NULL THEN mbr.point ELSE NULL  END                               AS point,
    
    
-   ---------------------- 如果加入会员，是否在LCS转化
+  ---------------------- 如果加入会员，是否在LCS转化
    
-   CASE WHEN trans_orders_in_lcs.crm_member_id IS NOT NULL THEN 1 ELSE 0 END AS ever_purchased_in_lcs,
-   trans_orders_in_lcs.order_count                                    AS ttl_orders_in_lcs,
-   trans_rrp_in_lcs.mbr_sales                                         AS ttl_rrp_sales_in_lcs,
+  CASE WHEN trans_orders_in_lcs.crm_member_id IS NOT NULL THEN 1 ELSE 0 END AS ever_purchased_in_lcs,
+  trans_orders_in_lcs.order_count                                    AS ttl_orders_in_lcs,
+  trans_rrp_in_lcs.mbr_sales                                         AS ttl_rrp_sales_in_lcs,
   
    
-   ---------------------- 如果加入会员，是否在本客户转化
+  ---------------------- 如果加入会员，是否在本客户转化
    
    
-   CASE WHEN trans_orders_by_partner.crm_member_id IS NOT NULL THEN 1 ELSE 0 END AS ever_purchased_in_partner,
-   trans_orders_by_partner.order_count                                    AS ttl_orders_in_partner,
-   trans_rrp_by_partner.mbr_sales                                         AS ttl_rrp_sales_in_partner,
+  CASE WHEN trans_orders_by_partner.crm_member_id IS NOT NULL THEN 1 ELSE 0 END AS ever_purchased_in_partner,
+  trans_orders_by_partner.order_count                                    AS ttl_orders_in_partner,
+  trans_rrp_by_partner.mbr_sales                                         AS ttl_rrp_sales_in_partner,
    
 ------------------------- 在本客户最后一次购买的情况，用于后续customize沟通
-   last_purchase.date_id                                       AS last_purchase_in_partner_dt,
-   last_purchase.original_store_code                           AS last_purchase_in_partner_store_code,
-   last_purchase.store_name                                    AS last_purchase_in_partner_store_name,
-   last_purchase.lego_sku_id                                   AS last_purchase_in_partner_sku_id,
-   last_purchase.lego_sku_name_cn                              AS last_purchase_in_partner_sku_name_cn,
-   last_purchase.mbr_sales                                     AS last_purchase_in_partner_rrp_sales,
+  last_purchase.date_id                                       AS last_purchase_in_partner_dt,
+  last_purchase.original_store_code                           AS last_purchase_in_partner_store_code,
+  last_purchase.store_name                                    AS last_purchase_in_partner_store_name,
+  last_purchase.lego_sku_id                                   AS last_purchase_in_partner_sku_id,
+  last_purchase.lego_sku_name_cn                              AS last_purchase_in_partner_sku_name_cn,
+  last_purchase.mbr_sales                                     AS last_purchase_in_partner_rrp_sales,
 
-   to_char(getdate(), 'yyyymmdd')                              AS dl_batch_date,
-   getdate()                                                   AS dl_load_time
+  to_char(getdate(), 'yyyymmdd')                              AS dl_batch_date,
+  getdate()                                                   AS dl_load_time
   FROM tutorial.mz_lcs_historical_member_base base
 --   LEFT JOIN (  SELECT DISTINCT member_detail_id,
 --                     phone
@@ -153,7 +170,7 @@ LEFT JOIN ods.crm_member_phone  phone_list
          ON base.encrypt_phone = phone_list.phone
   LEFT JOIN edw.d_member_detail mbr
          ON phone_list.member_detail_id::integer = mbr.member_detail_id::integer
-  LEFT JOIN (SELECT DISTINCT member_detail_id FROM member_base_partner) member_base
+  LEFT JOIN (SELECT member_detail_id, MIN(belong_by_partner_dt) AS belong_to_lcs_dt FROM member_base_partner GROUP BY 1) member_base
          ON phone_list.member_detail_id::integer = member_base.member_detail_id::integer
   LEFT JOIN member_base_partner
          ON phone_list.member_detail_id::integer = member_base_partner.member_detail_id::integer
@@ -173,7 +190,7 @@ LEFT JOIN ods.crm_member_phone  phone_list
                   GROUP BY 1
             ) trans_rrp_in_lcs
          ON member_base_partner.member_detail_id::integer = trans_rrp_in_lcs.crm_member_id::integer
-  LEFT JOIN (SELECT  CASE WHEN trans.distributor_name IN ('LCS UNIFUN (CS)', 'LCS UNIFUN (SY)') THEN 'LCS UNIFUN'
+  LEFT JOIN (SELECT CASE WHEN trans.distributor_name IN ('LCS UNIFUN (CS)', 'LCS UNIFUN (SY)') THEN 'LCS UNIFUN'
                          WHEN trans.distributor_name IN ('LCS XJM (CD)', 'LCS XJM (ZZ)') THEN 'LCS XJM'
                          WHEN trans.distributor_name IN ('LCS MCFJ (FJ)', 'LCS MCSZ (SZ)') THEN 'LCS MCFJ (FJ) & LCS MCSZ (SZ)'
                          ELSE trans.distributor_name
@@ -203,7 +220,6 @@ LEFT JOIN ods.crm_member_phone  phone_list
   LEFT JOIN last_purchase
          ON member_base_partner.member_detail_id::integer = last_purchase.crm_member_id::integer
         AND member_base_partner.partner = last_purchase.partner;
-        
         
         
     
