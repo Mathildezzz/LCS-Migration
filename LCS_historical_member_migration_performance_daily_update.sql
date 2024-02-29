@@ -1,4 +1,4 @@
-truncate tutorial.mz_lcs_historical_member_migration_performance; -- for the subsequent update
+delete from tutorial.mz_lcs_historical_member_migration_performance;  -- for the subsequent update
 insert into tutorial.mz_lcs_historical_member_migration_performance
 
 WITH all_purchase_rk AS (
