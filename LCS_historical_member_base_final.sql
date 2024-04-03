@@ -192,6 +192,16 @@ WHERE ranked.rk = 1
        NULL                                            AS historical_city,
        CASE WHEN historical_vip_tier IN ('高级会员','VIP会员') THEN '1' ELSE '0' END AS if_historical_high_vip_tier 
    FROM tutorial.mz_xjm_historical_member_base_final
+   UNION ALL
+   SELECT DISTINCT REPLACE(phone, ',','')                         AS phone,
+            'LCS KQL (BJ)'                                        AS partner,
+            NULL                                                  AS distributor,
+            NULL                                                  AS historical_join_dt,
+            NULL                                                  AS historical_join_channel,
+            NULL                                                  AS historical_vip_tier,
+            NULL                                                  AS historical_city,
+            NULL                                                  AS if_historical_high_vip_tier
+     FROM tutorial.mz_KQL_historical_member_base_final
    )
    
    SELECT DISTINCT 
