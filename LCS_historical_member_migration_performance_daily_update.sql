@@ -16,17 +16,11 @@ SELECT DISTINCT
              END                   AS partner,
         trans.crm_member_id,
         trans.original_order_id,
-        orders.order_paid_time
+        trans.order_paid_time
 FROM edw.f_member_order_detail trans
-LEFT JOIN (SELECT original_store_code, 
-                  original_order_id,
-                  MIN(order_paid_time) AS order_paid_time
-            FROM edw.f_lcs_order_detail
-             GROUP BY  1,2
-        ) orders
-      ON trans.original_order_id = CONCAT(orders.original_store_code, orders.original_order_id)
     WHERE is_rrp_sales_type = 1 
       AND if_eff_order_tag IS TRUE
+      AND crm_member_id IS NOT NULL
       )
 ),
 
@@ -98,7 +92,54 @@ SELECT partner,
                   GROUP BY 1,2
           )
           GROUP BY 1,2
+),
+
+wecom_by_distributor AS (
+select
+    -- shopper attributes
+    pr.member_detail_id
+    ,rel.external_user_unionid
+    
+    -- store staff attributes
+    ,rel.staff_ext_id
+    ,staff.staff_name
+    ,staff.lego_store_code
+    ,staff.store_name
+    ,staff.distributor AS distributor_name
+    ,staff.partner
+    ,CASE WHEN distributor IN ('LCS UNIFUN (CS)', 'LCS UNIFUN (SY)') THEN 'LCS UNIFUN'
+          WHEN distributor IN ('LCS XJM (CD)', 'LCS XJM (ZZ)') THEN 'LCS XJM'
+          WHEN distributor IN ('LCS MCFJ (FJ)', 'LCS MCSZ (SZ)') THEN 'LCS MCFJ (FJ) & LCS MCSZ (SZ)'
+          ELSE distributor
+    END                AS partner_customized
+    ,staff.region
+    ,staff.channel
+
+    -- friend relationship creation attributes
+    ,rel.relation_created_at
+    ,rel.relation_source as created_type  --0：在职添加，1：继承/内部成员共享
+
+    
+    -- friend relationship deletion attributes
+    ,rel.relation_deleted
+    
+from edw.f_sa_staff_external_user_relation_detail rel
+left join edw.d_sa_staff_info staff
+    on rel.staff_ext_id = staff.staff_ext_id
+-- 目前CA金表获取会员ID使用的是edw.f_crm_thirdparty_bind_detail，建议先保持一致，便于与FR看到的统计表对齐。未来会迁移到以下CRM银表：
+-- left join edw.f_platform_relationship pr
+--     on pr.platform = 'WMP' 
+--     and pr.wmp_union_id = rel.external_user_unionid
+left join edw.f_crm_thirdparty_bind_detail pr
+    on pr.id_type = 'unionId'
+    and pr.thirdparty_app_id = 4
+    and pr.id_value = rel.external_user_unionid
+where 1=1
+and staff.lego_store_code is not null
+AND relation_deleted = 0
+AND channel = 'LCS'
 )
+
 
 
 SELECT 
@@ -157,9 +198,12 @@ SELECT
   last_purchase.lego_sku_name_cn                              AS last_purchase_in_partner_sku_name_cn,
   last_purchase.mbr_sales                                     AS last_purchase_in_partner_rrp_sales,
 
+-------------------------- 是否加本客户企微
+  CASE WHEN wecom.member_detail_id IS NOT NULL THEN 1 ELSE 0 END AS add_partner_wecom,
+-------------------------------------------------------------------
   to_char(getdate(), 'yyyymmdd')                              AS dl_batch_date,
   getdate()                                                   AS dl_load_time
-  FROM tutorial.mz_lcs_historical_member_base base
+  FROM tutorial.mz_lcs_historical_member_base_v2 base
 --   LEFT JOIN (  SELECT DISTINCT member_detail_id,
 --                     phone
 --                 from report.member_phone phone_list
@@ -219,7 +263,10 @@ LEFT JOIN ods.crm_member_phone  phone_list
         AND member_base_partner.partner  = trans_rrp_by_partner.partner
   LEFT JOIN last_purchase
          ON member_base_partner.member_detail_id::integer = last_purchase.crm_member_id::integer
-        AND member_base_partner.partner = last_purchase.partner;
+        AND member_base_partner.partner = last_purchase.partner
+  LEFT JOIN (SELECT DISTINCT member_detail_id, partner_customized FROM wecom_by_distributor) wecom
+         ON member_base_partner.member_detail_id::integer = wecom.member_detail_id::integer
+        AND member_base_partner.partner = wecom.partner_customized;
         
         
     
