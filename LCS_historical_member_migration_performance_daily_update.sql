@@ -203,7 +203,7 @@ SELECT
 -------------------------------------------------------------------
   to_char(getdate(), 'yyyymmdd')                              AS dl_batch_date,
   getdate()                                                   AS dl_load_time
-  FROM tutorial.mz_lcs_historical_member_base_v2 base
+  FROM tutorial.mz_lcs_historical_member_base base
 --   LEFT JOIN (  SELECT DISTINCT member_detail_id,
 --                     phone
 --                 from report.member_phone phone_list
